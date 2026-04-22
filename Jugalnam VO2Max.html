@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VO₂max Race Predictor — 러닝 기록 예측 계산기</title>
+<meta name="description" content="최근 달리기 기록을 입력하면 VO₂max를 계산하고 5K, 10K, 하프 마라톤, 풀 마라톤 예상 기록을 알려드립니다. Jack Daniels, Riegel, Cameron 공식 지원.">
+<meta name="keywords" content="VO2max, 러닝, 마라톤, 기록 예측, 페이스 계산, Jack Daniels, VDOT">
+
+<!-- Open Graph / SNS 미리보기 -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="VO₂max Race Predictor">
+<meta property="og:description" content="최근 기록으로 5K, 10K, 하프, 풀 마라톤 예상 기록을 계산해보세요. VO₂max 기반 정밀 예측.">
+<meta property="og:url" content="https://jugalnam.github.io/vo2max-calculator/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VO₂max Race Predictor">
+<meta name="twitter:description" content="최근 기록으로 5K, 10K, 하프, 풀 마라톤 예상 기록을 계산해보세요.">
+
+<!-- Favicon (SVG 인라인 — 주황색 원에 흰색 글자) -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%230a0a0a'/%3E%3Ccircle cx='50' cy='50' r='32' fill='none' stroke='%23ff5722' stroke-width='6'/%3E%3Ctext x='50' y='62' font-family='Georgia,serif' font-size='36' font-style='italic' fill='%23f5f1ea' text-anchor='middle'%3EV%3C/text%3E%3C/svg%3E">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,800;1,9..144,400&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #141414;
+    --bg-elev: #1c1c1c;
+    --border: #2a2a2a;
+    --border-strong: #3a3a3a;
+    --text: #f5f1ea;
+    --text-dim: #8a847a;
+    --text-faint: #4a4540;
+    --accent: #ff5722;
+    --accent-dim: #cc3d0e;
+    --success: #7cff7c;
+    --warn: #ffc857;
+    --serif: 'Fraunces', Georgia, serif;
+    --mono: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  body {
+    background-image:
+      radial-gradient(ellipse at top left, rgba(255,87,34,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(255,87,34,0.04) 0%, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 32px 80px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Header */
+  header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: end;
+    gap: 32px;
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(48px, 7vw, 96px);
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 18px;
+    color: var(--text-dim);
+    max-width: 280px;
+    text-align: right;
+    line-height: 1.4;
+  }
+
+  /* Main layout */
+  .layout {
+    display: grid;
+    grid-template-columns: 420px 1fr;
+    gap: 32px;
+  }
+
+  @media (max-width: 960px) {
+    .layout { grid-template-columns: 1fr; }
+    header { grid-template-columns: 1fr; }
+    .tagline { text-align: left; max-width: none; }
+  }
+
+  /* Cards */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    position: relative;
+  }
+
+  .card-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .card-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+  }
+
+  .card-title {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 20px;
+    letter-spacing: -0.01em;
+  }
+
+  .card-body {
+    padding: 28px 24px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tab {
+    flex: 1;
+    padding: 14px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    border-right: 1px solid var(--border);
+  }
+
+  .tab:last-child { border-right: none; }
+
+  .tab:hover { color: var(--text); }
+
+  .tab.active {
+    color: var(--text);
+    background: var(--bg-elev);
+  }
+
+  .tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Form */
+  .field {
+    margin-bottom: 22px;
+  }
+
+  .label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .label span {
+    color: var(--accent);
+  }
+
+  .input, .select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 12px 14px;
+    font-family: var(--mono);
+    font-size: 14px;
+    transition: all 0.15s;
+    border-radius: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .input:focus, .select:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #0f0f0f;
+  }
+
+  .select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a847a' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
+    cursor: pointer;
+  }
+
+  .time-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+  }
+
+  .time-input-wrap {
+    position: relative;
+  }
+
+  .time-input-wrap::after {
+    content: attr(data-unit);
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    pointer-events: none;
+  }
+
+  .distance-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .preset-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  .chip {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .chip:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .btn {
+    width: 100%;
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 8px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn:hover {
+    background: var(--accent-dim);
+    transform: translateY(-1px);
+  }
+
+  .btn:active {
+    transform: translateY(0);
+  }
+
+  /* Results - VO2max display */
+  .vo2-display {
+    padding: 40px 32px;
+    text-align: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vo2-display::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at center, rgba(255,87,34,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .vo2-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+  }
+
+  .vo2-value {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: clamp(80px, 12vw, 140px);
+    line-height: 0.9;
+    letter-spacing: -0.04em;
+    color: var(--text);
+    font-feature-settings: "tnum";
+  }
+
+  .vo2-value em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent);
+  }
+
+  .vo2-unit {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    letter-spacing: 0.15em;
+    margin-top: 8px;
+  }
+
+  .vo2-level {
+    display: inline-block;
+    margin-top: 20px;
+    padding: 6px 14px;
+    background: var(--bg-elev);
+    border: 1px solid var(--border-strong);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text);
+  }
+
+  .vo2-level .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* Predictions table */
+  .predictions {
+    padding: 24px;
+  }
+
+  .pred-header {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 16px;
+    padding: 0 4px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+
+  .pred-header > div {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .pred-header > div:nth-child(2),
+  .pred-header > div:nth-child(3) {
+    text-align: right;
+  }
+
+  .pred-row {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr 1fr;
+    gap: 16px;
+    padding: 18px 4px;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  .pred-row:last-child {
+    border-bottom: none;
+  }
+
+  .pred-row:hover {
+    background: rgba(255,87,34,0.03);
+  }
+
+  .pred-distance {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--text);
+  }
+
+  .pred-distance .meta {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-faint);
+    letter-spacing: 0.1em;
+    margin-top: 2px;
+    font-style: normal;
+    font-weight: 400;
+  }
+
+  .pred-time {
+    font-family: var(--serif);
+    font-weight: 300;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    text-align: right;
+    color: var(--text);
+    font-feature-settings: "tnum";
+  }
+
+  .pred-pace {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--text-dim);
+    font-feature-settings: "tnum";
+  }
+
+  .pred-pace .pace-num {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .empty-state {
+    padding: 80px 40px;
+    text-align: center;
+    color: var(--text-faint);
+  }
+
+  .empty-state .big {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 28px;
+    font-weight: 300;
+    color: var(--text-dim);
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+
+  .empty-state .small {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Gap analysis (goal mode) */
+  .gap-box {
+    padding: 24px;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--border);
+  }
+
+  .gap-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .gap-row .key {
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+
+  .gap-row .val {
+    font-family: var(--serif);
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  .gap-row .val.pos { color: var(--success); }
+  .gap-row .val.neg { color: var(--warn); }
+
+  /* Formula selector */
+  .formula-info {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: var(--bg);
+    border-left: 2px solid var(--accent);
+    line-height: 1.5;
+  }
+
+  /* Footer */
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .fade-in {
+    animation: fadeUp 0.4s ease-out backwards;
+  }
+
+  .fade-in:nth-child(1) { animation-delay: 0s; }
+  .fade-in:nth-child(2) { animation-delay: 0.05s; }
+  .fade-in:nth-child(3) { animation-delay: 0.10s; }
+  .fade-in:nth-child(4) { animation-delay: 0.15s; }
+
+  /* Tick marks decoration */
+  .tick-row {
+    display: flex;
+    gap: 3px;
+    margin-top: 16px;
+    justify-content: center;
+  }
+
+  .tick {
+    width: 2px;
+    height: 8px;
+    background: var(--border-strong);
+  }
+
+  .tick.active { background: var(--accent); }
+
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <div class="eyebrow">Running Science · Est. 2026</div>
+      <h1>VO<em>₂</em>Max<br>Race Predictor</h1>
+    </div>
+    <div class="tagline">
+      "The body achieves<br>what the mind believes —<br>measured precisely."
+    </div>
+  </header>
+
+  <div class="layout">
+
+    <!-- INPUT PANEL -->
+    <div class="card fade-in">
+      <div class="tabs">
+        <button class="tab active" data-tab="predict">01 · Predict</button>
+        <button class="tab" data-tab="goal">02 · Goal</button>
+      </div>
+
+      <!-- PREDICT MODE -->
+      <div class="tab-content active" id="tab-predict">
+        <div class="card-body">
+          <div class="field">
+            <label class="label">Recent Performance <span>*</span></label>
+            <div class="distance-group">
+              <input type="number" class="input" id="raceDistance" placeholder="Distance" step="0.01" min="0.1" value="10">
+              <select class="select" id="distanceUnit">
+                <option value="km">km</option>
+                <option value="m">m</option>
+              </select>
+            </div>
+            <div class="preset-chips">
+              <button class="chip" data-dist="5">5K</button>
+              <button class="chip" data-dist="10">10K</button>
+              <button class="chip" data-dist="21.0975">Half</button>
+              <button class="chip" data-dist="42.195">Full</button>
+              <button class="chip" data-dist="3">3K</button>
+              <button class="chip" data-dist="1.609">Mile</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Finishing Time</label>
+            <div class="time-group">
+              <div class="time-input-wrap" data-unit="H">
+                <input type="number" class="input" id="hours" placeholder="00" min="0" max="10" value="0">
+              </div>
+              <div class="time-input-wrap" data-unit="M">
+                <input type="number" class="input" id="minutes" placeholder="00" min="0" max="59" value="45">
+              </div>
+              <div class="time-input-wrap" data-unit="S">
+                <input type="number" class="input" id="seconds" placeholder="00" min="0" max="59" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Prediction Formula</label>
+            <select class="select" id="formula">
+              <option value="daniels">Jack Daniels (VO₂max)</option>
+              <option value="riegel">Peter Riegel (Power Law)</option>
+              <option value="cameron">Dave Cameron</option>
+              <option value="average">Average of all three</option>
+            </select>
+            <div class="formula-info" id="formulaInfo">
+              Daniels & Gilbert's equation — physiologically grounded, most accurate for 5K–Half distances.
+            </div>
+          </div>
+
+          <button class="btn" id="calcBtn">Calculate →</button>
+        </div>
+      </div>
+
+      <!-- GOAL MODE -->
+      <div class="tab-content" id="tab-goal">
+        <div class="card-body">
+          <div class="field">
+            <label class="label">Target Race</label>
+            <select class="select" id="goalDistance">
+              <option value="5">5K</option>
+              <option value="10" selected>10K</option>
+              <option value="21.0975">Half Marathon</option>
+              <option value="42.195">Full Marathon</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label class="label">Target Time</label>
+            <div class="time-group">
+              <div class="time-input-wrap" data-unit="H">
+                <input type="number" class="input" id="goalHours" placeholder="00" min="0" max="10" value="0">
+              </div>
+              <div class="time-input-wrap" data-unit="M">
+                <input type="number" class="input" id="goalMinutes" placeholder="00" min="0" max="59" value="40">
+              </div>
+              <div class="time-input-wrap" data-unit="S">
+                <input type="number" class="input" id="goalSeconds" placeholder="00" min="0" max="59" value="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="label">Current Performance (optional)</label>
+            <div class="distance-group">
+              <input type="number" class="input" id="currentDist" placeholder="Distance" step="0.01" value="10">
+              <select class="select" id="currentDistUnit">
+                <option value="km">km</option>
+                <option value="m">m</option>
+              </select>
+            </div>
+            <div class="time-group" style="margin-top: 8px;">
+              <div class="time-input-wrap" data-unit="H">
+                <input type="number" class="input" id="curHours" placeholder="00" min="0" max="10" value="0">
+              </div>
+              <div class="time-input-wrap" data-unit="M">
+                <input type="number" class="input" id="curMinutes" placeholder="00" min="0" max="59" value="45">
+              </div>
+              <div class="time-input-wrap" data-unit="S">
+                <input type="number" class="input" id="curSeconds" placeholder="00" min="0" max="59" value="0">
+              </div>
+            </div>
+          </div>
+
+          <button class="btn" id="goalBtn">Analyze Gap →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESULTS PANEL -->
+    <div class="card fade-in" id="results">
+      <div class="card-header">
+        <div>
+          <div class="card-num">/ RESULTS 002</div>
+          <div class="card-title" id="resultsTitle">Race Projections</div>
+        </div>
+        <div class="tick-row">
+          <div class="tick active"></div>
+          <div class="tick active"></div>
+          <div class="tick active"></div>
+          <div class="tick"></div>
+          <div class="tick"></div>
+        </div>
+      </div>
+
+      <div id="resultsContent">
+        <div class="empty-state">
+          <div class="big">Enter your recent race<br>to see your projected times.</div>
+          <div class="small">— Awaiting input —</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div>© Running Lab / Prototype</div>
+    <div>Units: km · min/km</div>
+  </footer>
+</div>
+
+<script>
+/* ============================================================
+   VO2MAX CALCULATOR — Core math
+   ============================================================ */
+
+// ---- Utility ----
+const timeToSeconds = (h, m, s) => (Number(h) || 0) * 3600 + (Number(m) || 0) * 60 + (Number(s) || 0);
+const secondsToTime = (totalSec) => {
+  totalSec = Math.round(totalSec);
+  const h = Math.floor(totalSec / 3600);
+  const m = Math.floor((totalSec % 3600) / 60);
+  const s = totalSec % 60;
+  return h > 0
+    ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    : `${m}:${String(s).padStart(2,'0')}`;
+};
+const paceFromSecPerKm = (secPerKm) => {
+  const m = Math.floor(secPerKm / 60);
+  const s = Math.round(secPerKm % 60);
+  return `${m}:${String(s).padStart(2,'0')}`;
+};
+
+// ---- Jack Daniels (Daniels & Gilbert) ----
+// VO2max estimated from a race performance.
+// Inputs: distance in meters, time in seconds
+// Outputs: VO2max (ml/kg/min)
+function danielsVO2max(distanceMeters, timeSeconds) {
+  const timeMin = timeSeconds / 60;
+  const velocity = distanceMeters / timeMin; // m/min
+  const vo2 = -4.60 + 0.182258 * velocity + 0.000104 * velocity * velocity;
+  const pctMax = 0.8
+    + 0.1894393 * Math.exp(-0.012778 * timeMin)
+    + 0.2989558 * Math.exp(-0.1932605 * timeMin);
+  return vo2 / pctMax;
+}
+
+// Predict time for a given distance from VO2max (inverse of Daniels).
+// Uses binary search since the equation is implicit in time.
+function danielsPredictTime(vo2max, distanceMeters) {
+  let lo = 60;      // 1 min lower bound
+  let hi = 6 * 3600; // 6 hr upper bound
+  for (let i = 0; i < 80; i++) {
+    const mid = (lo + hi) / 2;
+    const est = danielsVO2max(distanceMeters, mid);
+    if (est > vo2max) lo = mid; else hi = mid;
+  }
+  return (lo + hi) / 2;
+}
+
+// ---- Peter Riegel ----
+// T2 = T1 * (D2/D1)^1.06
+function riegelPredict(d1m, t1s, d2m) {
+  return t1s * Math.pow(d2m / d1m, 1.06);
+}
+
+// ---- Dave Cameron ----
+// Formula: T2 = (T1/D1) * (a - b*log(D1)) / (a - b*log(D2)) * D2
+// where a = 13.49681, b = 0.048865, c = 2.082419
+// Actually the common Cameron formula:
+// T2 = T1 * (13.49681 - 0.048865*D1 + 2.438461*log10(D1)) /
+//           (13.49681 - 0.048865*D2 + 2.438461*log10(D2)) * (D2/D1)
+// Distances in miles. We convert.
+function cameronPredict(d1m, t1s, d2m) {
+  const d1mi = d1m / 1609.344;
+  const d2mi = d2m / 1609.344;
+  const a = 13.49681;
+  const b = 0.048865;
+  const c = 2.438461;
+  const num = a - b * d1mi + c * Math.log10(d1mi);
+  const den = a - b * d2mi + c * Math.log10(d2mi);
+  return (t1s / d1mi) * (num / den) * d2mi;
+}
+
+// ---- VO2max fitness level ----
+// Rough categorization for adult males; close enough for MVP.
+function fitnessLevel(vo2) {
+  if (vo2 >= 70) return { label: 'Elite', color: '#ff5722' };
+  if (vo2 >= 60) return { label: 'Excellent', color: '#ff5722' };
+  if (vo2 >= 52) return { label: 'Very Good', color: '#7cff7c' };
+  if (vo2 >= 45) return { label: 'Good', color: '#7cff7c' };
+  if (vo2 >= 38) return { label: 'Fair', color: '#ffc857' };
+  return { label: 'Beginner', color: '#8a847a' };
+}
+
+/* ============================================================
+   UI — tabs
+   ============================================================ */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    document.getElementById('resultsTitle').textContent =
+      tab.dataset.tab === 'goal' ? 'Gap Analysis' : 'Race Projections';
+  });
+});
+
+// Preset chip clicks
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.getElementById('raceDistance').value = chip.dataset.dist;
+    document.getElementById('distanceUnit').value = 'km';
+  });
+});
+
+// Formula info updates
+const formulaDescs = {
+  daniels: "Daniels & Gilbert's equation — physiologically grounded, most accurate for 5K–Half distances.",
+  riegel: "Peter Riegel's power law (exponent 1.06) — simple and widely used, tends to underestimate marathon.",
+  cameron: "Dave Cameron's empirical formula — calibrated on elite performances, often best for longer distances.",
+  average: "Averages predictions from all three formulas — a balanced estimate with reduced single-model bias."
+};
+document.getElementById('formula').addEventListener('change', (e) => {
+  document.getElementById('formulaInfo').textContent = formulaDescs[e.target.value];
+});
+
+/* ============================================================
+   CALCULATE — Predict mode
+   ============================================================ */
+document.getElementById('calcBtn').addEventListener('click', () => {
+  const distValue = parseFloat(document.getElementById('raceDistance').value);
+  const distUnit = document.getElementById('distanceUnit').value;
+  const h = document.getElementById('hours').value;
+  const m = document.getElementById('minutes').value;
+  const s = document.getElementById('seconds').value;
+  const formula = document.getElementById('formula').value;
+
+  if (!distValue || distValue <= 0) {
+    alert('Please enter a valid distance.');
+    return;
+  }
+  const distM = distUnit === 'km' ? distValue * 1000 : distValue;
+  const timeS = timeToSeconds(h, m, s);
+  if (timeS < 30) {
+    alert('Please enter a valid time.');
+    return;
+  }
+
+  const vo2 = danielsVO2max(distM, timeS);
+  const level = fitnessLevel(vo2);
+
+  const targets = [
+    { name: '5K',    meta: '5,000 m',    d: 5000 },
+    { name: '10K',   meta: '10,000 m',   d: 10000 },
+    { name: 'Half',  meta: '21.0975 km', d: 21097.5 },
+    { name: 'Full',  meta: '42.195 km',  d: 42195 },
+  ];
+
+  const predictions = targets.map(t => {
+    let time;
+    if (formula === 'daniels') {
+      time = danielsPredictTime(vo2, t.d);
+    } else if (formula === 'riegel') {
+      time = riegelPredict(distM, timeS, t.d);
+    } else if (formula === 'cameron') {
+      time = cameronPredict(distM, timeS, t.d);
+    } else {
+      time = (
+        danielsPredictTime(vo2, t.d) +
+        riegelPredict(distM, timeS, t.d) +
+        cameronPredict(distM, timeS, t.d)
+      ) / 3;
+    }
+    const pace = time / (t.d / 1000); // sec per km
+    return { ...t, time, pace };
+  });
+
+  renderPredictions(vo2, level, predictions);
+});
+
+function renderPredictions(vo2, level, predictions) {
+  const html = `
+    <div class="vo2-display">
+      <div class="vo2-label">Estimated VO₂max</div>
+      <div class="vo2-value"><em>${vo2.toFixed(1)}</em></div>
+      <div class="vo2-unit">ml · kg⁻¹ · min⁻¹</div>
+      <div class="vo2-level"><span class="dot" style="background:${level.color}"></span>${level.label}</div>
+    </div>
+    <div class="predictions">
+      <div class="pred-header">
+        <div>Distance</div>
+        <div>Time</div>
+        <div>Pace</div>
+      </div>
+      ${predictions.map(p => `
+        <div class="pred-row">
+          <div class="pred-distance">
+            ${p.name}
+            <span class="meta">${p.meta}</span>
+          </div>
+          <div class="pred-time">${secondsToTime(p.time)}</div>
+          <div class="pred-pace"><span class="pace-num">${paceFromSecPerKm(p.pace)}</span> /km</div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+  document.getElementById('resultsContent').innerHTML = html;
+}
+
+/* ============================================================
+   GOAL mode — Gap analysis
+   ============================================================ */
+document.getElementById('goalBtn').addEventListener('click', () => {
+  const goalD = parseFloat(document.getElementById('goalDistance').value) * 1000;
+  const gh = document.getElementById('goalHours').value;
+  const gm = document.getElementById('goalMinutes').value;
+  const gs = document.getElementById('goalSeconds').value;
+  const goalT = timeToSeconds(gh, gm, gs);
+
+  if (goalT < 30) {
+    alert('Please enter a valid target time.');
+    return;
+  }
+
+  const requiredVO2 = danielsVO2max(goalD, goalT);
+  const level = fitnessLevel(requiredVO2);
+
+  // Optional current performance
+  const curDistVal = parseFloat(document.getElementById('currentDist').value);
+  const curUnit = document.getElementById('currentDistUnit').value;
+  const ch = document.getElementById('curHours').value;
+  const cm = document.getElementById('curMinutes').value;
+  const cs = document.getElementById('curSeconds').value;
+  const curT = timeToSeconds(ch, cm, cs);
+
+  let currentVO2 = null;
+  let gap = null;
+  let predictedGoalTime = null;
+  if (curDistVal && curT >= 30) {
+    const curD = curUnit === 'km' ? curDistVal * 1000 : curDistVal;
+    currentVO2 = danielsVO2max(curD, curT);
+    gap = requiredVO2 - currentVO2;
+    predictedGoalTime = danielsPredictTime(currentVO2, goalD);
+  }
+
+  const goalPace = goalT / (goalD / 1000);
+
+  let gapHtml = '';
+  if (currentVO2 !== null) {
+    const timeDiff = predictedGoalTime - goalT; // positive = need to improve
+    gapHtml = `
+      <div class="gap-box">
+        <div class="gap-row">
+          <div class="key">Current VO₂max</div>
+          <div class="val">${currentVO2.toFixed(1)}</div>
+        </div>
+        <div class="gap-row">
+          <div class="key">Gap</div>
+          <div class="val ${gap > 0 ? 'neg' : 'pos'}">
+            ${gap > 0 ? '+' : ''}${gap.toFixed(1)} ml/kg/min
+          </div>
+        </div>
+        <div class="gap-row">
+          <div class="key">Your current projected time</div>
+          <div class="val">${secondsToTime(predictedGoalTime)}</div>
+        </div>
+        <div class="gap-row">
+          <div class="key">Needed improvement</div>
+          <div class="val ${timeDiff > 0 ? 'neg' : 'pos'}">
+            ${timeDiff > 0 ? '-' : '+'}${secondsToTime(Math.abs(timeDiff))}
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const html = `
+    <div class="vo2-display">
+      <div class="vo2-label">Required VO₂max</div>
+      <div class="vo2-value"><em>${requiredVO2.toFixed(1)}</em></div>
+      <div class="vo2-unit">ml · kg⁻¹ · min⁻¹</div>
+      <div class="vo2-level"><span class="dot" style="background:${level.color}"></span>${level.label} level needed</div>
+    </div>
+    <div class="predictions">
+      <div class="pred-header">
+        <div>Target</div>
+        <div>Time</div>
+        <div>Pace</div>
+      </div>
+      <div class="pred-row">
+        <div class="pred-distance">
+          Goal
+          <span class="meta">${(goalD/1000).toFixed(4).replace(/\.?0+$/,'')} km</span>
+        </div>
+        <div class="pred-time">${secondsToTime(goalT)}</div>
+        <div class="pred-pace"><span class="pace-num">${paceFromSecPerKm(goalPace)}</span> /km</div>
+      </div>
+    </div>
+    ${gapHtml}
+  `;
+  document.getElementById('resultsContent').innerHTML = html;
+});
+
+// Auto-calculate once on load to show a populated example
+window.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('calcBtn').click();
+});
+</script>
+</body>
+</html>
